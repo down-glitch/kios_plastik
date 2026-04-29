@@ -6,6 +6,11 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Http\Controllers\ProductCatalogController;
 use Illuminate\Support\Facades\Storage;
+
+Route::get('/{any}', function () {
+    return view('app'); // Ganti 'app' sesuai nama file blade utama Anda (resources/views/app.blade.php)
+})->where('any', '.*');
+
 Route::get('/print-laporan', function (Illuminate\Http\Request $request) {
     $query = App\Models\Transaction::where('type', 'out');
 

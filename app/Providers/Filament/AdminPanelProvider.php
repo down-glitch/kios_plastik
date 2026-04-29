@@ -34,8 +34,8 @@ class AdminPanelProvider extends PanelProvider
             ->databaseNotifications()
             ->login()
             ->colors([
-            'primary' => Color::rgb('rgb(30, 58, 90)'), // Ini adalah konversi OKLCH kamu ke RGB
-            'gray' => Color::Slate, // Slate sangat cocok disandingkan dengan biru navy
+            'primary' => Color::Zinc, // Mengubah warna utama menjadi Zinc
+            'gray' => Color::Zinc,// Slate sangat cocok disandingkan dengan biru navy
         ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')

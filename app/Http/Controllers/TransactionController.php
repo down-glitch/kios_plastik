@@ -13,7 +13,15 @@ class TransactionController extends Controller
 {
     public function store(Request $request)
     {
-        // Validasi request
+        // 1. Validasi Token/Autentikasi (Paling Penting)
+        if (!Auth::check()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Sesi login tidak valid atau telah berakhir.'
+            ], 401);
+        }
+
+        // 2. Validasi Request
         $validated = $request->validate([
             'cart' => 'required|array|min:1',
             'cart.*.id' => 'required|integer|exists:products,id',
@@ -26,8 +34,9 @@ class TransactionController extends Controller
         return DB::transaction(function () use ($validated) {
             $cart = $validated['cart'];
             $paidAmount = (float) $validated['paid_amount'];
+            $userId = Auth::id(); // Mengambil ID Staf dari Token
             
-            // 1. Validasi stok sebelum transaksi
+            // 3. Validasi stok sebelum transaksi
             $totalAmount = 0;
             foreach ($cart as $item) {
                 $product = Product::find($item['id']);
@@ -49,7 +58,7 @@ class TransactionController extends Controller
                 $totalAmount += $item['qty'] * $item['selling_price'];
             }
             
-            // 2. Cek uang bayar cukup
+            // 4. Cek uang bayar cukup
             if ($paidAmount < $totalAmount) {
                 return response()->json([
                     'status' => 'error',
@@ -59,9 +68,8 @@ class TransactionController extends Controller
             }
             
             $changeAmount = $paidAmount - $totalAmount;
-            $userId = Auth::id() ?? 1;
             
-            // 3. Buat Transaksi
+            // 5. Buat Transaksi
             $transaction = Transaction::create([
                 'invoice_number' => 'KP-' . date('Ymd') . strtoupper(Str::random(4)),
                 'user_id' => $userId,
@@ -73,7 +81,7 @@ class TransactionController extends Controller
                 'change_amount' => $changeAmount,
             ]);
 
-            // 4. Simpan Detail & Potong Stok
+            // 6. Simpan Detail & Potong Stok
             foreach ($cart as $item) {
                 $transaction->details()->create([
                     'product_id' => $item['id'],
@@ -97,7 +105,7 @@ class TransactionController extends Controller
 
     public function show($id)
     {
-        $transaction = Transaction::with('details.product', 'user')->find($id);
+        $transaction = Transaction::with(['details.product', 'user'])->find($id);
         
         if (!$transaction) {
             return response()->json(['error' => 'Transaksi tidak ditemukan'], 404);
@@ -108,7 +116,8 @@ class TransactionController extends Controller
 
     public function index()
     {
-        $transactions = Transaction::with('details', 'user')
+        // Menggunakan paginate karena Riwayat Transaksi biasanya banyak
+        $transactions = Transaction::with(['details', 'user'])
             ->orderBy('transaction_date', 'desc')
             ->paginate(20);
         

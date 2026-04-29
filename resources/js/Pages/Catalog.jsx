@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 
-const Catalog = () => {
+const Catalog = ( ) => {
     const [products, setProducts] = useState([]);
     const [cart, setCart] = useState([]);
     const [search, setSearch] = useState("");
@@ -83,58 +83,64 @@ const Catalog = () => {
     );
     const changeAmount = parseInt(payAmount) - totalPrice;
 
-    const handleCheckout = async () => {
-        if (cart.length === 0) {
-            showMessage("warning", "Keranjang kosong!");
-            return;
-        }
-        if (parseInt(payAmount) < totalPrice) {
-            showMessage(
-                "error",
-                `Uang bayar kurang! Kurang Rp ${(totalPrice - parseInt(payAmount)).toLocaleString("id-ID")}`,
-            );
-            return;
-        }
+ const handleCheckout = async () => {
+     const token = localStorage.getItem("token");
 
-        setLoading(true);
-        try {
-            const response = await axios.post("/api/transactions", {
-                cart: cart,
-                paid_amount: parseInt(payAmount),
-                note: "Penjualan Kasir",
-            });
+     // 1. HITUNG TOTAL HARGA DULU
+     // Kita jumlahkan (harga * quantity) dari semua item di keranjang
+     const totalHarga = cart.reduce((sum, item) => {
+         return sum + Number(item.price) * (item.quantity || 1);
+     }, 0);
 
-            showMessage(
-                "success",
-                `✓ Transaksi berhasil! Invoice: ${response.data.invoice}`,
-            );
-            setCart([]);
-            setPayAmount(0);
-            fetchProducts();
-        } catch (error) {
-            const errorMsg =
-                error.response?.data?.message ||
-                error.message ||
-                "Gagal menyimpan transaksi";
-            showMessage("error", errorMsg);
-        } finally {
-            setLoading(false);
-        }
-    };
+     // 2. SIAPKAN DATA (PAYLOAD)
+     const payload = {
+         cart: cart,
+         total_amount: totalHarga, // Gunakan variabel totalHarga yang baru dihitung
+         paid_amount: payAmount, // Uang yang dibayarkan pelanggan
+     };
 
+     try {
+         const response = await axios.post(
+             "http://127.0.0.1:8000/api/transactions",
+             payload,
+             {
+                 headers: {
+                     Authorization: `Bearer ${token}`,
+                     Accept: "application/json",
+                 },
+             },
+         );
+
+         if (response.status === 200 || response.status === 201) {
+             alert("Transaksi Berhasil!");
+
+             // Bersihkan state agar halaman "seolah-olah" refresh
+             setCart([]);
+             setPayAmount(0);
+
+             // Kalau mau refresh total halaman:
+             window.location.reload();
+         }
+     } catch (error) {
+         console.error("Detail Error:", error.response?.data);
+         alert(
+             "Gagal: " + (error.response?.data?.message || "Terjadi kesalahan"),
+         );
+     }
+ };
     return (
-        <div className="flex h-screen bg-gray-100 font-sans">
+        <div className="flex h-screen bg-zinc-50 font-sans text-zinc-900">
             {/* NOTIFIKASI */}
             {message.text && (
                 <div
-                    className={`fixed top-4 right-4 p-4 rounded-lg text-white z-50 ${
+                    className={`fixed top-4 right-4 p-4 rounded-lg text-white z-50 shadow-lg transition-all ${
                         message.type === "success"
-                            ? "bg-green-500"
+                            ? "bg-zinc-800" // Gunakan zinc gelap untuk success agar kontras tapi tetap elegan
                             : message.type === "error"
-                              ? "bg-red-500"
+                              ? "bg-red-600"
                               : message.type === "warning"
-                                ? "bg-yellow-500"
-                                : "bg-blue-500"
+                                ? "bg-orange-500"
+                                : "bg-zinc-600"
                     }`}
                 >
                     {message.text}
@@ -144,7 +150,7 @@ const Catalog = () => {
             {/* BAGIAN KIRI: KATALOG PRODUK */}
             <div className="w-2/3 p-6 overflow-y-auto">
                 <div className="flex justify-between items-center mb-6">
-                    <h1 className="text-2xl font-bold text-gray-800">
+                    <h1 className="text-2xl font-bold text-zinc-800">
                         Kios Plastik - Kasir
                     </h1>
                     <input
@@ -152,7 +158,7 @@ const Catalog = () => {
                         placeholder="Cari produk..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        className="p-2 border rounded-lg w-64 shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                        className="p-2 border border-zinc-300 rounded-lg w-64 shadow-sm focus:outline-none focus:ring-2 focus:ring-zinc-800 bg-white"
                     />
                 </div>
 
@@ -165,8 +171,10 @@ const Catalog = () => {
                             <div
                                 key={product.id}
                                 onClick={() => addToCart(product)}
-                                className={`bg-white p-4 rounded-xl shadow-sm cursor-pointer hover:ring-2 hover:ring-amber-500 transition-all ${
-                                    product.stock <= 0 ? "opacity-50" : ""
+                                className={`bg-white p-4 rounded-xl border border-zinc-200 shadow-sm cursor-pointer hover:ring-2 hover:ring-zinc-800 transition-all ${
+                                    product.stock <= 0
+                                        ? "opacity-50 grayscale"
+                                        : ""
                                 }`}
                             >
                                 <img
@@ -175,23 +183,23 @@ const Catalog = () => {
                                     className="h-32 w-full object-cover rounded-lg mb-3"
                                     onError={(e) =>
                                         (e.target.src =
-                                            "https://placehold.co/400x300?text=No+Image")
+                                            "https://placehold.co/400x300/e4e4e7/52525b?text=No+Image")
                                     }
                                 />
-                                <h3 className="font-semibold text-gray-700 truncate">
+                                <h3 className="font-semibold text-zinc-700 truncate">
                                     {product.name}
                                 </h3>
-                                <p className="text-amber-600 font-bold">
+                                <p className="text-zinc-900 font-bold">
                                     Rp{" "}
                                     {Number(
                                         product.selling_price,
                                     ).toLocaleString("id-ID")}
                                 </p>
                                 <span
-                                    className={`text-xs ${
+                                    className={`text-xs font-medium ${
                                         product.stock < 10
                                             ? "text-red-500"
-                                            : "text-gray-400"
+                                            : "text-zinc-400"
                                     }`}
                                 >
                                     Stok: {product.stock}
@@ -202,34 +210,38 @@ const Catalog = () => {
             </div>
 
             {/* BAGIAN KANAN: KERANJANG & CHECKOUT */}
-            <div className="w-1/3 bg-white shadow-2xl p-6 flex flex-col">
-                <h2 className="text-xl font-bold mb-4 border-b pb-2">
+            <div className="w-1/3 bg-white shadow-xl border-l border-zinc-200 p-6 flex flex-col">
+                <h2 className="text-xl font-bold mb-4 border-b border-zinc-100 pb-2 text-zinc-800">
                     Pesanan ({cart.length})
                 </h2>
 
                 <div className="flex-1 overflow-y-auto">
                     {cart.length === 0 ? (
-                        <p className="text-gray-400 text-center mt-10 text-sm italic">
-                            Belum ada barang dipilih
-                        </p>
+                        <div className="flex flex-col items-center mt-10">
+                            <p className="text-zinc-400 text-sm italic">
+                                Belum ada barang dipilih
+                            </p>
+                        </div>
                     ) : (
                         cart.map((item) => (
                             <div
                                 key={item.id}
-                                className="mb-3 bg-gray-50 p-3 rounded-lg border border-gray-200"
+                                className="mb-3 bg-zinc-50 p-3 rounded-lg border border-zinc-200"
                             >
                                 <div className="flex justify-between items-start mb-2">
-                                    <p className="font-medium text-sm">
+                                    <p className="font-medium text-sm text-zinc-700">
                                         {item.name}
                                     </p>
                                     <button
                                         onClick={() => removeFromCart(item.id)}
-                                        className="text-red-500 hover:text-red-700 text-xs font-bold"
+                                        className="text-zinc-400 hover:text-red-500 transition-colors"
                                     >
-                                        ✕
+                                        <span className="text-xs font-bold">
+                                            ✕
+                                        </span>
                                     </button>
                                 </div>
-                                <p className="text-gray-600 text-xs mb-2">
+                                <p className="text-zinc-500 text-xs mb-2 font-mono">
                                     Rp{" "}
                                     {Number(item.selling_price).toLocaleString(
                                         "id-ID",
@@ -237,7 +249,7 @@ const Catalog = () => {
                                     x {item.qty}
                                 </p>
                                 <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-1">
                                         <button
                                             onClick={() =>
                                                 updateQuantity(
@@ -245,11 +257,11 @@ const Catalog = () => {
                                                     item.qty - 1,
                                                 )
                                             }
-                                            className="bg-gray-300 hover:bg-gray-400 px-2 py-1 rounded text-xs font-bold"
+                                            className="bg-white border border-zinc-300 hover:bg-zinc-100 px-2 py-1 rounded text-xs font-bold text-zinc-600"
                                         >
                                             −
                                         </button>
-                                        <span className="w-8 text-center text-sm font-bold">
+                                        <span className="w-8 text-center text-sm font-bold text-zinc-700">
                                             {item.qty}
                                         </span>
                                         <button
@@ -259,12 +271,12 @@ const Catalog = () => {
                                                     item.qty + 1,
                                                 )
                                             }
-                                            className="bg-gray-300 hover:bg-gray-400 px-2 py-1 rounded text-xs font-bold"
+                                            className="bg-white border border-zinc-300 hover:bg-zinc-100 px-2 py-1 rounded text-xs font-bold text-zinc-600"
                                         >
                                             +
                                         </button>
                                     </div>
-                                    <span className="font-bold text-amber-600">
+                                    <span className="font-bold text-zinc-900">
                                         Rp{" "}
                                         {Number(
                                             item.qty * item.selling_price,
@@ -276,46 +288,42 @@ const Catalog = () => {
                     )}
                 </div>
 
-                <div className="border-t pt-4 space-y-3">
+                <div className="border-t border-zinc-100 pt-4 space-y-3">
                     <div className="flex justify-between text-lg font-bold">
-                        <span>Total:</span>
-                        <span className="text-amber-600">
+                        <span className="text-zinc-600">Total:</span>
+                        <span className="text-zinc-900">
                             Rp {totalPrice.toLocaleString("id-ID")}
                         </span>
                     </div>
 
                     <div>
-                        <label className="text-xs text-gray-500">
+                        <label className="text-[10px] uppercase tracking-wider font-bold text-zinc-400">
                             Uang Bayar (Rp)
                         </label>
                         <input
                             type="number"
                             value={payAmount}
                             onChange={(e) => {
-                                // Ambil nilai, buang karakter non-angka
                                 let val = e.target.value;
-
-                                // Konversi ke Number untuk menghilangkan leading zero secara otomatis
                                 let numericValue = Number(val);
-
                                 if (val === "" || numericValue < 0) {
                                     setPayAmount(0);
                                 } else {
                                     setPayAmount(numericValue);
                                 }
                             }}
-                            className="w-full p-3 bg-gray-100 border-none rounded-lg text-xl font-mono"
+                            className="w-full p-3 bg-zinc-100 border border-zinc-200 rounded-lg text-xl font-mono focus:ring-2 focus:ring-zinc-800 outline-none"
                             disabled={loading}
                         />
                     </div>
 
-                    <div className="flex justify-between text-sm py-2 bg-gray-50 p-2 rounded">
-                        <span>Kembalian:</span>
+                    <div className="flex justify-between text-sm py-2 px-3 bg-zinc-50 rounded border border-zinc-100">
+                        <span className="text-zinc-500">Kembalian:</span>
                         <span
                             className={`font-bold ${
                                 changeAmount < 0
                                     ? "text-red-500"
-                                    : "text-green-600"
+                                    : "text-zinc-900"
                             }`}
                         >
                             Rp {changeAmount.toLocaleString("id-ID")}
@@ -327,7 +335,7 @@ const Catalog = () => {
                         disabled={
                             cart.length === 0 || changeAmount < 0 || loading
                         }
-                        className="w-full bg-amber-500 hover:bg-amber-600 disabled:bg-gray-300 text-white py-4 rounded-xl font-bold transition-all shadow-lg active:scale-95"
+                        className="w-full bg-zinc-900 hover:bg-black disabled:bg-zinc-200 disabled:text-zinc-400 text-white py-4 rounded-xl font-bold transition-all shadow-md active:scale-[0.98]"
                     >
                         {loading ? "MEMPROSES..." : "SIMPAN TRANSAKSI"}
                     </button>

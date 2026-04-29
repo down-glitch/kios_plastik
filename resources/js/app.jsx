@@ -1,25 +1,20 @@
-import '../css/app.css';
-import './bootstrap';
+import "./bootstrap";
+import "../css/app.css";
 
-import { createInertiaApp } from '@inertiajs/react';
-import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
-import { createRoot } from 'react-dom/client';
+import React from "react"; // <--- Tambahkan baris ini secara eksplisit
+import { createRoot } from "react-dom/client";
+import { BrowserRouter } from "react-router-dom";
+import AppRoutes from "./AppRoutes";
 
-const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+const container = document.getElementById("app");
 
-createInertiaApp({
-    title: (title) => `${title} - ${appName}`,
-    resolve: (name) =>
-        resolvePageComponent(
-            `./Pages/${name}.jsx`,
-            import.meta.glob('./Pages/**/*.jsx'),
-        ),
-    setup({ el, App, props }) {
-        const root = createRoot(el);
-
-        root.render(<App {...props} />);
-    },
-    progress: {
-        color: '#4B5563',
-    },
-});
+if (container) {
+    const root = createRoot(container);
+    root.render(
+        <React.StrictMode>
+            <BrowserRouter>
+                <AppRoutes />
+            </BrowserRouter>
+        </React.StrictMode>,
+    );
+}
